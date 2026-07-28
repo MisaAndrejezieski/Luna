@@ -1,31 +1,104 @@
-# Ambiente virtual
+# ============================================
+# .gitignore - Arquivos ignorados pelo Git
+# ============================================
+
+# -------------------- AMBIENTE VIRTUAL --------------------
 .venv/
 venv/
 ENV/
 env/
+virtualenv/
 
-# Python
+# -------------------- PYTHON --------------------
+# Bytecode e arquivos compilados
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 *.egg-info/
+*.egg
 dist/
 build/
+develop-eggs/
+downloads/
+eggs/
+parts/
+var/
+lib64/
+share/
+*.whl
 
-# IDE
+# Arquivos de teste e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# -------------------- EDITORES/IDEs --------------------
+# VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm
 .idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Outros editores
 *.swp
 *.swo
-
-# Sistema
+*~
 .DS_Store
+
+# -------------------- SISTEMAS --------------------
+# Windows
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# Logs e bancos
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+*.pid
+*.seed
+
+# -------------------- LOGS E BANCOS --------------------
 *.log
 *.db
 *.sqlite
+*.sqlite3
+*.pid
+*.seed
+
+# -------------------- ARQUIVOS DE CONFIGURAÇÃO LOCAL --------------------
+.env
+.env.local
+.env.*.local
+config.local.py
+
+# -------------------- ARQUIVOS DE MODELOS (MUITO PESADOS) --------------------
+*.pkl
+*.h5
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+*.safetensors
+
+# -------------------- INSTALADORES --------------------
+*.exe
+*.msi
+*.dmg
+*.deb
+*.rpm
