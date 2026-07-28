@@ -3,6 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Ollama](https://img.shields.io/badge/Ollama-0.3+-orange.svg)](https://ollama.com)
 [![CustomTkinter](https://img.shields.io/badge/CustomTkinter-5.2+-purple.svg)](https://customtkinter.tomschimansky.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Luna** é sua assistente de programação que funciona 100% offline. 
 > Segura, privada e sempre disponível, mesmo sem internet.
@@ -17,6 +18,12 @@
 - 💻 **Foco em programação** - Ajuda com Python, JavaScript, debug, etc.
 - 🔒 **100% offline** - Seus dados ficam apenas no seu computador
 - 🎨 **Interface moderna** - Tema escuro com CustomTkinter
+
+---
+
+## 📸 Screenshot
+
+![Luna Interface](assets/screenshot.png)
 
 ---
 
