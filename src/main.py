@@ -16,11 +16,20 @@ from typing import Optional
 # Importações de terceiros
 import customtkinter as ctk
 
-from src.config import (COR_FUNDO, COR_PRIMARIA, COR_SECUNDARIA, EMOJI, FRASES,
-                        JANELA_ALTURA, JANELA_LARGURA, NOME_ASSISTENTE,
-                        SAUDACAO, TEMA)
 # Importações do projeto
 from src.ia import AssistenteProgramacao
+from src.config import (
+    NOME_ASSISTENTE,
+    EMOJI,
+    SAUDACAO,
+    COR_PRIMARIA,
+    COR_SECUNDARIA,
+    COR_FUNDO,
+    TEMA,
+    JANELA_LARGURA,
+    JANELA_ALTURA,
+    FRASES,
+)
 
 
 class AppLuna:
@@ -191,7 +200,7 @@ class AppLuna:
         input_frame.grid_columnconfigure(0, weight=1)
         input_frame.grid_columnconfigure(1, weight=0)
         
-        # Campo de texto - SEM placeholder_text (não é suportado)
+        # Campo de texto
         self.input_text = ctk.CTkTextbox(
             input_frame,
             height=60,
@@ -264,8 +273,7 @@ class AppLuna:
         # Desabilita o botão durante o processamento
         self.btn_enviar.configure(
             state="disabled",
-            text="⏳ Pensando...",
-            fg_color=COR_SECUNDARIA
+            text="⏳ Pensando..."
         )
         
         # Processa em uma thread separada
@@ -279,18 +287,13 @@ class AppLuna:
         """
         try:
             resposta = self.assistente.perguntar(pergunta)
-            self.janela.after(0, self.adicionar_mensagem, "🌙 Luna", resposta, True)
+            self.janela.after(0, lambda: self.adicionar_mensagem("🌙 Luna", resposta, True))
         except Exception as e:
             msg_erro = f"❌ Desculpe, tive um problema: {e}"
-            self.janela.after(0, self.adicionar_mensagem, "🌙 Luna", msg_erro, True)
+            self.janela.after(0, lambda: self.adicionar_mensagem("🌙 Luna", msg_erro, True))
         finally:
-            self.janela.after(
-                0, 
-                self.btn_enviar.configure,
-                state="normal",
-                text="📤 Enviar",
-                fg_color=COR_PRIMARIA
-            )
+            # Reabilita o botão - usando lambda para evitar problemas
+            self.janela.after(0, lambda: self.btn_enviar.configure(state="normal", text="📤 Enviar"))
     
     def adicionar_mensagem(self, remetente: str, texto: str, is_luna: bool = False):
         """
