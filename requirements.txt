@@ -1,0 +1,21 @@
+# ============================================
+# requirements.txt - Dependências do Projeto
+# ============================================
+
+# --- Framework e Integração com IA ---
+# LangChain: Framework para construção de aplicações com LLMs
+langchain>=0.3.0
+
+# langchain-ollama: Integração específica com Ollama
+langchain-ollama>=0.1.0
+
+# --- Interface Gráfica ---
+# customtkinter: Interface moderna com tema dark/light
+customtkinter>=5.2.0
+
+# Pillow: Processamento de imagens para ícones e assets
+Pillow>=10.0.0
+
+# --- Utilitários ---
+# pyperclip: Copiar texto para área de transferência
+pyperclip>=1.8.0
