@@ -1,5 +1,5 @@
 # ============================================
-# src/ia.py - Lógica da IA da Luna
+# src/ia.py - Lógica da IA da Luna (versão atualizada)
 # ============================================
 """
 Módulo de lógica da IA para a assistente Luna.
@@ -12,15 +12,20 @@ e as interações com o modelo de linguagem.
 import subprocess
 from typing import List, Optional
 
-from langchain.memory import ConversationBufferMemory
-from langchain_community.chat_message_histories import ChatMessageHistory
+# Importações de terceiros - VERSÃO ATUALIZADA
+from langchain_ollama import OllamaLLM
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
-# Importações de terceiros
-from langchain_ollama import OllamaLLM
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 # Importações do projeto
-from src.config import MAX_TOKENS, MODELO_PADRAO, NOME_ASSISTENTE, TEMPERATURA
+from src.config import (
+    MODELO_PADRAO, 
+    TEMPERATURA, 
+    NOME_ASSISTENTE,
+    MAX_TOKENS
+)
 
 
 class AssistenteProgramacao:
@@ -30,27 +35,18 @@ class AssistenteProgramacao:
     Gerencia a interação com o modelo de linguagem, mantém
     o histórico da conversa e fornece métodos para perguntar,
     limpar memória e trocar modelos.
-    
-    Atributos:
-        nome (str): Nome da assistente
-        modelo (str): Nome do modelo atual
-        llm (OllamaLLM): Instância do modelo
-        memory (ChatMessageHistory): Histórico da conversa
-        chain (RunnableWithMessageHistory): Cadeia de conversação
     """
     
     def __init__(self, modelo: str = MODELO_PADRAO):
         """
         Inicializa a assistente com um modelo específico.
-        
-        Args:
-            modelo (str): Nome do modelo no Ollama (ex: "phi3", "llama3.2")
         """
         self.nome = NOME_ASSISTENTE
         self.modelo = modelo
         self.llm: Optional[OllamaLLM] = None
         self.memory: Optional[ChatMessageHistory] = None
         self.chain: Optional[RunnableWithMessageHistory] = None
+        self.session_id = "luna_session"
         
         # Tenta inicializar o modelo
         self.inicializar()
@@ -58,25 +54,38 @@ class AssistenteProgramacao:
     def inicializar(self) -> bool:
         """
         Inicializa ou reinicializa o modelo e a memória.
-        
-        Este método é chamado no construtor e também quando
-        o usuário troca de modelo.
-        
-        Returns:
-            bool: True se inicializou com sucesso, False caso contrário
         """
         try:
             # Cria a instância do modelo com configurações
             self.llm = OllamaLLM(
                 model=self.modelo,
                 temperature=TEMPERATURA,
-                num_predict=MAX_TOKENS,  # Novo nome para max_tokens
+                num_predict=MAX_TOKENS,
             )
             
             # Cria a memória para armazenar o histórico
             self.memory = ChatMessageHistory()
             
-            # Cria o template do prompt com personalidade da Luna
+            # Adiciona uma mensagem de sistema com a personalidade da Luna
+            self.memory.add_message(SystemMessage(
+                content="""Você é a Luna, uma assistente de programação amigável, paciente e offline.
+
+CARACTERÍSTICAS:
+- Você é acolhedora e encorajadora
+- Explica conceitos de forma clara e didática
+- Adora ajudar com código e programação
+- Seu tom é sempre positivo e motivador
+- Você é especialista em Python, mas também conhece JavaScript, Java, C++, etc.
+- Quando não sabe algo, você admite e sugere onde pesquisar
+
+REGRAS:
+- Sempre responda em português
+- Seja detalhada nas explicações
+- Ofereça exemplos de código quando relevante
+- Pergunte se a pessoa precisa de mais esclarecimentos"""
+            ))
+            
+            # Cria o template do prompt
             prompt = ChatPromptTemplate.from_messages([
                 ("system", """Você é a Luna, uma assistente de programação amigável, paciente e offline.
 
@@ -91,16 +100,15 @@ CARACTERÍSTICAS:
 REGRAS:
 - Sempre responda em português
 - Seja detalhada nas explicações
-- Ofereça exemplos de código quando relevante
-- Pergunte se a pessoa precisa de mais esclarecimentos"""),
+- Ofereça exemplos de código quando relevante"""),
                 MessagesPlaceholder(variable_name="history"),
                 ("human", "{input}")
             ])
             
-            # Cria a cadeia de conversação
-            from langchain_core.output_parsers import StrOutputParser
+            # Cria a cadeia de conversação com histórico
             from langchain_core.runnables import RunnablePassthrough
-
+            from langchain_core.output_parsers import StrOutputParser
+            
             # Cria a cadeia básica
             chain = prompt | self.llm | StrOutputParser()
             
@@ -122,21 +130,15 @@ REGRAS:
     def perguntar(self, pergunta: str) -> str:
         """
         Envia uma pergunta para a assistente e retorna a resposta.
-        
-        Args:
-            pergunta (str): Pergunta do usuário
-            
-        Returns:
-            str: Resposta da assistente ou mensagem de erro
         """
         if not self.chain:
             return "❌ Desculpe, a Luna não está inicializada corretamente."
         
         try:
-            # Envia a pergunta com um session_id fixo
+            # Envia a pergunta com o session_id fixo
             resposta = self.chain.invoke(
                 {"input": pergunta},
-                config={"configurable": {"session_id": "luna_session"}}
+                config={"configurable": {"session_id": self.session_id}}
             )
             return resposta.strip()
             
@@ -146,22 +148,26 @@ REGRAS:
     def limpar_memoria(self) -> None:
         """
         Limpa o histórico da conversa.
-        
-        Útil para começar uma nova conversa sem o contexto anterior.
         """
         if self.memory:
             self.memory.clear()
+            # Re-adiciona a mensagem de sistema
+            self.memory.add_message(SystemMessage(
+                content="""Você é a Luna, uma assistente de programação amigável, paciente e offline.
+                
+CARACTERÍSTICAS:
+- Você é acolhedora e encorajadora
+- Explica conceitos de forma clara e didática
+- Adora ajudar com código e programação
+- Seu tom é sempre positivo e motivador
+- Você é especialista em Python, mas também conhece JavaScript, Java, C++, etc.
+- Quando não sabe algo, você admite e sugere onde pesquisar"""
+            ))
             print("🧹 Memória da Luna limpa!")
     
     def trocar_modelo(self, novo_modelo: str) -> bool:
         """
         Troca o modelo de IA em uso.
-        
-        Args:
-            novo_modelo (str): Nome do novo modelo
-            
-        Returns:
-            bool: True se a troca foi bem-sucedida
         """
         if novo_modelo == self.modelo:
             return True
@@ -172,30 +178,26 @@ REGRAS:
     def listar_modelos_disponiveis(self) -> List[str]:
         """
         Lista todos os modelos disponíveis no Ollama.
-        
-        Returns:
-            List[str]: Lista de nomes dos modelos instalados
         """
         try:
-            # Executa o comando 'ollama list'
+            # Usa o caminho completo do Ollama
+            ollama_path = r"C:\Users\Misa\AppData\Local\Programs\Ollama\ollama.exe"
+            
             resultado = subprocess.run(
-                ["ollama", "list"],
+                [ollama_path, "list"],
                 capture_output=True,
                 text=True,
-                timeout=10  # Timeout para não travar
+                timeout=10
             )
             
             if resultado.returncode == 0:
-                # Processa a saída do comando
                 linhas = resultado.stdout.strip().split('\n')
                 if len(linhas) <= 1:
-                    return []  # Nenhum modelo encontrado
+                    return []
                 
-                # Pula o cabeçalho e extrai os nomes dos modelos
                 modelos = []
                 for linha in linhas[1:]:
                     if linha.strip():
-                        # O nome é a primeira coluna
                         nome_modelo = linha.split()[0]
                         modelos.append(nome_modelo)
                 return modelos
@@ -206,7 +208,7 @@ REGRAS:
             print("⏰ Timeout ao listar modelos")
             return []
         except FileNotFoundError:
-            print("❌ Ollama não encontrado. Certifique-se de que está instalado.")
+            print("❌ Ollama não encontrado.")
             return []
         except Exception as e:
             print(f"❌ Erro ao listar modelos: {e}")
@@ -215,12 +217,6 @@ REGRAS:
     def verificar_modelo_instalado(self, nome_modelo: str) -> bool:
         """
         Verifica se um modelo específico está instalado.
-        
-        Args:
-            nome_modelo (str): Nome do modelo a verificar
-            
-        Returns:
-            bool: True se o modelo estiver instalado
         """
         modelos = self.listar_modelos_disponiveis()
         return nome_modelo in modelos
@@ -228,9 +224,6 @@ REGRAS:
     def get_status(self) -> dict:
         """
         Retorna o status atual da assistente.
-        
-        Returns:
-            dict: Dicionário com informações de status
         """
         return {
             "nome": self.nome,
