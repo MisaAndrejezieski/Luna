@@ -16,20 +16,11 @@ from typing import Optional
 # Importações de terceiros
 import customtkinter as ctk
 
+from src.config import (COR_FUNDO, COR_PRIMARIA, COR_SECUNDARIA, EMOJI, FRASES,
+                        JANELA_ALTURA, JANELA_LARGURA, NOME_ASSISTENTE,
+                        SAUDACAO, TEMA)
 # Importações do projeto
 from src.ia import AssistenteProgramacao
-from src.config import (
-    NOME_ASSISTENTE,
-    EMOJI,
-    SAUDACAO,
-    COR_PRIMARIA,
-    COR_SECUNDARIA,
-    COR_FUNDO,
-    TEMA,
-    JANELA_LARGURA,
-    JANELA_ALTURA,
-    FRASES,
-)
 
 
 class AppLuna:
