@@ -16,20 +16,11 @@ from typing import Optional
 # Importações de terceiros
 import customtkinter as ctk
 
+from src.config import (COR_FUNDO, COR_PRIMARIA, COR_SECUNDARIA, EMOJI, FRASES,
+                        JANELA_ALTURA, JANELA_LARGURA, NOME_ASSISTENTE,
+                        SAUDACAO, TEMA)
 # Importações do projeto
 from src.ia import AssistenteProgramacao
-from src.config import (
-    NOME_ASSISTENTE,
-    EMOJI,
-    SAUDACAO,
-    COR_PRIMARIA,
-    COR_SECUNDARIA,
-    COR_FUNDO,
-    TEMA,
-    JANELA_LARGURA,
-    JANELA_ALTURA,
-    FRASES,
-)
 
 
 class AppLuna:
@@ -38,16 +29,6 @@ class AppLuna:
     
     Gerencia a janela principal, todos os widgets da interface,
     a comunicação com a assistente e a atualização da tela.
-    
-    Atributos:
-        assistente (AssistenteProgramacao): Instância da IA
-        nome (str): Nome da assistente
-        emoji (str): Emoji da assistente
-        janela (ctk.CTk): Janela principal
-        chat_frame (ctk.CTkScrollableFrame): Área do chat
-        input_text (ctk.CTkTextbox): Campo de entrada
-        btn_enviar (ctk.CTkButton): Botão de enviar
-        status_label (ctk.CTkLabel): Label de status
     """
     
     def __init__(self):
@@ -97,11 +78,6 @@ class AppLuna:
     def criar_widgets(self):
         """
         Cria e organiza todos os widgets da interface.
-        
-        Estrutura:
-            - Header: Logo, título, status e botões
-            - Chat: Área rolável com mensagens
-            - Input: Campo de texto e botão enviar
         """
         # ============================================
         # HEADER (Barra Superior)
@@ -215,16 +191,27 @@ class AppLuna:
         input_frame.grid_columnconfigure(0, weight=1)
         input_frame.grid_columnconfigure(1, weight=0)
         
-        # Campo de texto
+        # Campo de texto - SEM placeholder_text (não é suportado)
         self.input_text = ctk.CTkTextbox(
             input_frame,
             height=60,
             font=ctk.CTkFont(size=14),
             border_width=2,
-            border_color=COR_PRIMARIA,
-            placeholder_text="Digite sua pergunta para a Luna..."
+            border_color=COR_PRIMARIA
         )
         self.input_text.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        
+        # Adiciona texto de placeholder manualmente
+        self.input_text.insert("1.0", "Digite sua pergunta para a Luna...")
+        self.input_text.configure(fg_color="#2D2D44")
+        
+        # Evento para limpar o placeholder quando clicar
+        def on_click(event):
+            if self.input_text.get("1.0", "end-1c") == "Digite sua pergunta para a Luna...":
+                self.input_text.delete("1.0", "end")
+                self.input_text.configure(fg_color="white")
+        
+        self.input_text.bind("<Button-1>", on_click)
         
         # Eventos de tecla
         self.input_text.bind("<Shift-Return>", self.enviar_mensagem_event)
@@ -252,32 +239,20 @@ class AppLuna:
     def enviar_mensagem_event(self, event=None):
         """
         Callback para eventos de tecla no campo de texto.
-        
-        - Enter: Envia a mensagem
-        - Shift+Enter: Quebra de linha (não envia)
-        
-        Args:
-            event: Evento do teclado
-            
-        Returns:
-            str: "break" para evitar comportamento padrão
         """
         if event and event.keysym == "Return":
             if event.state & 0x1:  # Shift pressionado
-                return  # Permite quebra de linha
+                return
             self.enviar_mensagem()
             return "break"
     
     def enviar_mensagem(self):
         """
         Envia a mensagem do usuário para a assistente Luna.
-        
-        Coleta o texto do input, limpa o campo, adiciona ao chat
-        e processa a resposta em uma thread separada para não travar a UI.
         """
         # Coleta e valida o texto
         texto = self.input_text.get("1.0", "end-1c").strip()
-        if not texto:
+        if not texto or texto == "Digite sua pergunta para a Luna...":
             return
         
         # Adiciona a mensagem do usuário ao chat
@@ -293,7 +268,7 @@ class AppLuna:
             fg_color=COR_SECUNDARIA
         )
         
-        # Processa em uma thread separada (não trava a UI)
+        # Processa em uma thread separada
         thread = threading.Thread(target=self.processar_resposta, args=(texto,))
         thread.daemon = True
         thread.start()
@@ -301,24 +276,14 @@ class AppLuna:
     def processar_resposta(self, pergunta: str):
         """
         Processa a resposta da Luna em background.
-        
-        Args:
-            pergunta (str): Pergunta do usuário
         """
         try:
-            # Obtém a resposta da assistente
             resposta = self.assistente.perguntar(pergunta)
-            
-            # Atualiza a UI na thread principal
             self.janela.after(0, self.adicionar_mensagem, "🌙 Luna", resposta, True)
-            
         except Exception as e:
-            # Em caso de erro, mostra mensagem de erro
             msg_erro = f"❌ Desculpe, tive um problema: {e}"
             self.janela.after(0, self.adicionar_mensagem, "🌙 Luna", msg_erro, True)
-            
         finally:
-            # Reabilita o botão
             self.janela.after(
                 0, 
                 self.btn_enviar.configure,
@@ -330,11 +295,6 @@ class AppLuna:
     def adicionar_mensagem(self, remetente: str, texto: str, is_luna: bool = False):
         """
         Adiciona uma nova mensagem ao chat com estilização.
-        
-        Args:
-            remetente (str): Nome do remetente
-            texto (str): Conteúdo da mensagem
-            is_luna (bool): True se for mensagem da Luna (estilo diferenciado)
         """
         # Cria o frame da mensagem
         frame = ctk.CTkFrame(
@@ -353,41 +313,38 @@ class AppLuna:
         )
         nome.pack(anchor="w", padx=10, pady=(5, 0))
         
-        # Texto da mensagem (em um Textbox para permitir rolagem)
+        # Texto da mensagem
         texto_widget = ctk.CTkTextbox(
             frame,
-            height=50,  # Altura inicial
+            height=50,
             font=ctk.CTkFont(size=13),
-            wrap="word",  # Quebra de linha automática
+            wrap="word",
             fg_color="transparent",
             border_width=0,
             text_color="white" if is_luna else "#E0E0E0"
         )
         texto_widget.insert("1.0", texto)
-        texto_widget.configure(state="disabled")  # Torna somente leitura
+        texto_widget.configure(state="disabled")
         
-        # Ajusta a altura automaticamente baseado no conteúdo
+        # Ajusta a altura
         linhas = texto.count('\n') + 1
-        if linhas > 10:  # Limita a 10 linhas visíveis
+        if linhas > 10:
             linhas = 10
         texto_widget.configure(height=linhas * 20 + 20)
         texto_widget.pack(fill="x", padx=10, pady=(0, 5))
         
-        # Rola automaticamente para o final
+        # Rola para o final
         self.chat_frame._parent_canvas.yview_moveto(1.0)
     
     def limpar_historico(self):
         """
         Limpa o histórico da conversa e o chat.
         """
-        # Limpa a memória da assistente
         self.assistente.limpar_memoria()
         
-        # Remove todas as mensagens do chat
         for widget in self.chat_frame.winfo_children():
             widget.destroy()
         
-        # Mostra mensagem de confirmação
         self.adicionar_mensagem(
             "🌙 Luna",
             FRASES["limpeza"],
@@ -397,24 +354,17 @@ class AppLuna:
     def abrir_trocar_modelo(self):
         """
         Abre uma janela modal para trocar o modelo de IA.
-        
-        Exibe a lista de modelos disponíveis no Ollama
-        e permite que o usuário selecione um.
         """
-        # Cria a janela de diálogo
         dialog = ctk.CTkToplevel(self.janela)
         dialog.title(f"{EMOJI} Luna - Trocar Modelo")
         dialog.geometry("400x350")
-        dialog.transient(self.janela)  # Mantém sobre a janela principal
-        dialog.grab_set()  # Modal (bloqueia interação com a janela principal)
+        dialog.transient(self.janela)
+        dialog.grab_set()
         
-        # Centraliza a janela
         dialog.update_idletasks()
         x = self.janela.winfo_x() + (self.janela.winfo_width() - 400) // 2
         y = self.janela.winfo_y() + (self.janela.winfo_height() - 350) // 2
         dialog.geometry(f"+{x}+{y}")
-        
-        # ===== CONTEÚDO DA JANELA =====
         
         # Título
         titulo = ctk.CTkLabel(
@@ -424,7 +374,6 @@ class AppLuna:
         )
         titulo.pack(pady=(20, 5))
         
-        # Subtítulo
         subtitulo = ctk.CTkLabel(
             dialog,
             text="Modelos disponíveis no Ollama",
@@ -433,20 +382,16 @@ class AppLuna:
         )
         subtitulo.pack(pady=(0, 15))
         
-        # Obtém a lista de modelos instalados
         modelos = self.assistente.listar_modelos_disponiveis()
         if not modelos:
-            # Se não houver modelos, usa uma lista padrão
             modelos = ["phi3", "llama3.2", "mistral", "codellama", "deepseek-coder"]
         
-        # Modelo atual (selecionado por padrão)
         modelo_atual = self.assistente.modelo
         if modelo_atual in modelos:
             indice_atual = modelos.index(modelo_atual)
         else:
             indice_atual = 0
         
-        # Menu dropdown com os modelos
         combo = ctk.CTkOptionMenu(
             dialog,
             values=modelos,
@@ -458,7 +403,6 @@ class AppLuna:
         combo.pack(pady=10)
         combo.set(modelo_atual)
         
-        # Informações sobre os modelos
         info_frame = ctk.CTkFrame(dialog, fg_color="transparent")
         info_frame.pack(pady=10)
         
@@ -475,34 +419,23 @@ class AppLuna:
         )
         info_text.pack()
         
-        # Botão de confirmação
         def confirmar():
-            """Callback para confirmar a troca de modelo."""
             novo_modelo = combo.get()
             if novo_modelo and novo_modelo != self.assistente.modelo:
-                # Tenta trocar o modelo
                 sucesso = self.assistente.trocar_modelo(novo_modelo)
-                
                 if sucesso:
-                    # Atualiza o status
                     self.status_label.configure(text=f"🧠 {novo_modelo}")
-                    
-                    # Mensagem de confirmação no chat
                     self.adicionar_mensagem(
                         "🌙 Luna",
                         FRASES["troca_modelo"].format(modelo=novo_modelo),
                         is_luna=True
                     )
                 else:
-                    # Mensagem de erro
                     self.adicionar_mensagem(
                         "🌙 Luna",
-                        f"❌ Não foi possível trocar para {novo_modelo}. "
-                        "Verifique se o modelo está instalado.",
+                        f"❌ Não foi possível trocar para {novo_modelo}.",
                         is_luna=True
                     )
-            
-            # Fecha o diálogo
             dialog.destroy()
         
         btn_confirmar = ctk.CTkButton(
@@ -515,7 +448,6 @@ class AppLuna:
         )
         btn_confirmar.pack(pady=20)
         
-        # Botão cancelar (opcional)
         btn_cancelar = ctk.CTkButton(
             dialog,
             text="❌ Cancelar",
@@ -530,22 +462,10 @@ class AppLuna:
     def run(self):
         """
         Inicia o loop principal da aplicação.
-        
-        Este método deve ser chamado para iniciar a interface gráfica.
         """
         self.janela.mainloop()
 
 
-# ============================================
-# PONTO DE ENTRADA
-# ============================================
-
 if __name__ == "__main__":
-    """
-    Ponto de entrada da aplicação.
-    
-    Cria uma instância da aplicação e inicia a interface.
-    """
-    # Cria e executa a aplicação
     app = AppLuna()
     app.run()
