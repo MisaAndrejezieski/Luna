@@ -12,8 +12,10 @@ e as interações com o modelo de linguagem.
 import subprocess
 from typing import List, Optional
 
-from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
 # Importações de terceiros
 from langchain_ollama import OllamaLLM
 
@@ -33,8 +35,8 @@ class AssistenteProgramacao:
         nome (str): Nome da assistente
         modelo (str): Nome do modelo atual
         llm (OllamaLLM): Instância do modelo
-        memory (ConversationBufferMemory): Memória da conversa
-        conversation (ConversationChain): Cadeia de conversação
+        memory (ChatMessageHistory): Histórico da conversa
+        chain (RunnableWithMessageHistory): Cadeia de conversação
     """
     
     def __init__(self, modelo: str = MODELO_PADRAO):
@@ -47,8 +49,8 @@ class AssistenteProgramacao:
         self.nome = NOME_ASSISTENTE
         self.modelo = modelo
         self.llm: Optional[OllamaLLM] = None
-        self.memory: Optional[ConversationBufferMemory] = None
-        self.conversation: Optional[ConversationChain] = None
+        self.memory: Optional[ChatMessageHistory] = None
+        self.chain: Optional[RunnableWithMessageHistory] = None
         
         # Tenta inicializar o modelo
         self.inicializar()
@@ -68,18 +70,46 @@ class AssistenteProgramacao:
             self.llm = OllamaLLM(
                 model=self.modelo,
                 temperature=TEMPERATURA,
-                max_tokens=MAX_TOKENS,
-                # verbose=True  # Descomente para debug
+                num_predict=MAX_TOKENS,  # Novo nome para max_tokens
             )
             
             # Cria a memória para armazenar o histórico
-            self.memory = ConversationBufferMemory()
+            self.memory = ChatMessageHistory()
+            
+            # Cria o template do prompt com personalidade da Luna
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """Você é a Luna, uma assistente de programação amigável, paciente e offline.
+
+CARACTERÍSTICAS:
+- Você é acolhedora e encorajadora
+- Explica conceitos de forma clara e didática
+- Adora ajudar com código e programação
+- Seu tom é sempre positivo e motivador
+- Você é especialista em Python, mas também conhece JavaScript, Java, C++, etc.
+- Quando não sabe algo, você admite e sugere onde pesquisar
+
+REGRAS:
+- Sempre responda em português
+- Seja detalhada nas explicações
+- Ofereça exemplos de código quando relevante
+- Pergunte se a pessoa precisa de mais esclarecimentos"""),
+                MessagesPlaceholder(variable_name="history"),
+                ("human", "{input}")
+            ])
             
             # Cria a cadeia de conversação
-            self.conversation = ConversationChain(
-                llm=self.llm,
-                memory=self.memory,
-                verbose=False  # Mude para True para ver os "pensamentos" da IA
+            from langchain_core.output_parsers import StrOutputParser
+            from langchain_core.runnables import RunnablePassthrough
+
+            # Cria a cadeia básica
+            chain = prompt | self.llm | StrOutputParser()
+            
+            # Adiciona histórico à cadeia
+            self.chain = RunnableWithMessageHistory(
+                chain,
+                lambda session_id: self.memory,
+                input_messages_key="input",
+                history_messages_key="history",
             )
             
             print(f"✅ {self.nome} inicializada com sucesso! Modelo: {self.modelo}")
@@ -99,30 +129,15 @@ class AssistenteProgramacao:
         Returns:
             str: Resposta da assistente ou mensagem de erro
         """
-        if not self.conversation:
+        if not self.chain:
             return "❌ Desculpe, a Luna não está inicializada corretamente."
         
         try:
-            # Cria um prompt com a personalidade da Luna
-            prompt = f"""
-            Você é a Luna, uma assistente de programação amigável, paciente e offline.
-            
-            CARACTERÍSTICAS:
-            - Você é acolhedora e encorajadora
-            - Explica conceitos de forma clara e didática
-            - Adora ajudar com código e programação
-            - Seu tom é sempre positivo e motivador
-            - Você é especialista em Python, mas também conhece JavaScript, Java, C++, etc.
-            - Quando não sabe algo, você admite e sugere onde pesquisar
-            
-            PERGUNTA DO USUÁRIO:
-            {pergunta}
-            
-            Sua resposta (seja amigável e útil):
-            """
-            
-            # Envia o prompt para o modelo
-            resposta = self.conversation.predict(input=prompt)
+            # Envia a pergunta com um session_id fixo
+            resposta = self.chain.invoke(
+                {"input": pergunta},
+                config={"configurable": {"session_id": "luna_session"}}
+            )
             return resposta.strip()
             
         except Exception as e:
@@ -221,7 +236,7 @@ class AssistenteProgramacao:
             "nome": self.nome,
             "modelo": self.modelo,
             "modelo_instalado": self.verificar_modelo_instalado(self.modelo),
-            "conversation_active": self.conversation is not None,
+            "conversation_active": self.chain is not None,
             "temperatura": TEMPERATURA,
             "max_tokens": MAX_TOKENS
         }
